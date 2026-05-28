@@ -40,13 +40,66 @@ export async function analyzeTrip(
   - Fuel Price: ${expenses.fuelPrice} RUB/L
   - Toll Roads: ${expenses.tollRoads} RUB`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const apiUrl = 'https://api.anthropic.com/v1/messages';
+  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+  const modelName = 'claude-sonnet-4-20250514';
+
+  const response = await fetch(apiUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
+      'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-
+      model: modelName,
+      max_tokens: 1024,
+      system: SYSTEM_INSTRUCTION,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+
+  const data = await response.json();
+  const text = data.content[0].text;
+  return JSON.parse(text);
+}
+
+export async function getDistance(
+  origin: string,
+  destination: string
+): Promise<number> {
+  const geocode = async (place: string) => {
+    const url = 'https://nominatim.openstreetmap.org/search'
+      + '?q=' + encodeURIComponent(place)
+      + '&format=json&limit=1';
+    const res = await fetch(url, {
+      headers: { 'Accept-Language': 'en' },
+    });
+    const data = await res.json();
+    if (!data.length) throw new Error('Place not found: ' + place);
+    return {
+      lat: parseFloat(data[0].lat),
+      lon: parseFloat(data[0].lon),
+    };
+  };
+
+  try {
+    const [from, to] = await Promise.all([
+      geocode(origin),
+      geocode(destination),
+    ]);
+    const osrmUrl = 'https://router.project-osrm.org/route/v1/driving/'
+      + from.lon + ',' + from.lat + ';'
+      + to.lon + ',' + to.lat
+      + '?overview=false';
+    const res = await fetch(osrmUrl);
+    const data = await res.json();
+    if (data.routes && data.routes.length > 0) {
+      return Math.round(data.routes[0].distance / 1000);
+    }
+    return 0;
+  } catch {
+    return 0;
+  }
+}
