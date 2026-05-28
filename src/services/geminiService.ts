@@ -40,29 +40,14 @@ export async function analyzeTrip(
   - Fuel Price: ${expenses.fuelPrice} RUB/L
   - Toll Roads: ${expenses.tollRoads} RUB`;
 
-  const apiUrl = 'https://api.anthropic.com/v1/messages';
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-  const modelName = 'claude-sonnet-4-20250514';
-
-  const response = await fetch(apiUrl, {
+  const response = await fetch('/api/analyze', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: modelName,
-      max_tokens: 1024,
-      system: SYSTEM_INSTRUCTION,
-      messages: [{ role: 'user', content: prompt }],
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, system: SYSTEM_INSTRUCTION }),
   });
 
   const data = await response.json();
-  const text = data.content[0].text;
-  return JSON.parse(text);
+  return data;
 }
 
 export async function getDistance(
