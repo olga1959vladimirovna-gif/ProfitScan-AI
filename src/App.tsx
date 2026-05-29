@@ -248,10 +248,15 @@ export default function App() {
   useEffect(() => {
     handleCalculate();
   }, [trip, expenses, rates, isDoubleCrew, selectedVehicle, selectedDriver, selectedSecondDriver]);
-
-  const handleGenerateReport = async () => {
+  
+useEffect(() => {
+    setAnalysis(null);
+  }, [language]);
+  
+ const handleGenerateReport = async () => {
     if (!result) return;
     setIsAnalyzing(true);
+    setAnalysis(null);
     try {
       const aiRes = await analyzeTrip(trip, selectedVehicle, selectedDriver, expenses, result.marginPercentage, language);
       setAnalysis(aiRes);
