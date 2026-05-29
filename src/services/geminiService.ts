@@ -5,15 +5,6 @@
 
 import { Vehicle, Driver, Trip, Expenses, AIAnalysis } from '../types.ts';
 
-const SYSTEM_INSTRUCTION = `You are ProfitScan AI, an intelligent logistics analyst.
-Your goal is to analyze trip data and provide:
-1. Risk Forecast: Analyze delay probability based on season, cargo type, and route.
-2. Fuel Optimization: Recommend regions or strategies for cheaper refueling.
-3. Negotiation Advice: Provide a persuasive argument for a dispatcher to raise the freight rate based on the numbers.
-
-Return the response ONLY as valid JSON, no markdown, no other text:
-{"riskForecast":"...","fuelOptimization":"...","negotiationAdvice":"...","summary":"..."}`;
-
 export async function analyzeTrip(
   trip: Trip,
   vehicle: Vehicle,
@@ -22,7 +13,27 @@ export async function analyzeTrip(
   margin: number,
   language: string
 ): Promise<AIAnalysis> {
-  const languageName = language === 'ru' ? 'Russian' : 'English';
+  const isRussian = language === 'ru';
+  const languageName = isRussian ? 'Russian' : 'English';
+
+  const systemInstruction = isRussian
+    ? `Ты ProfitScan AI, интеллектуальный аналитик логистики. Отвечай ТОЛЬКО на русском языке.
+Проанализируй данные рейса и предоставь:
+1. Прогноз рисков: вероятность задержки исходя из сезона, типа груза и маршрута.
+2. Оптимизация топлива: рекомендации по более дешёвой заправке.
+3. Совет по торгам: убедительный аргумент для повышения ставки фрахта.
+
+Верни ответ ТОЛЬКО как валидный JSON без markdown и лишнего текста:
+{"riskForecast":"...","fuelOptimization":"...","negotiationAdvice":"...","summary":"..."}`
+    : `You are ProfitScan AI, an intelligent logistics analyst. Reply ONLY in English.
+Analyze trip data and provide:
+1. Risk Forecast: delay probability based on season, cargo type, and route.
+2. Fuel Optimization: strategies for cheaper refueling.
+3. Negotiation Advice: persuasive argument to raise the freight rate.
+
+Return ONLY valid JSON without markdown:
+{"riskForecast":"...","fuelOptimization":"...","negotiationAdvice":"...","summary":"..."}`;
+
   const prompt = `Analyze this trip in ${languageName}: Route: ${trip.origin} to ${trip.destination}, Distance: ${trip.plannedDistance} km, Cargo: ${trip.cargoType}, Load: ${trip.loadLevel}%, Season: ${trip.season}, Vehicle: ${vehicle.model}, Rate: ${trip.freightRate} RUB, Margin: ${margin.toFixed(2)}%, Fuel: ${expenses.fuelPrice} RUB/L, Tolls: ${expenses.tollRoads} RUB`;
 
   const key = import.meta.env.VITE_ANTHROPIC_API_KEY;
@@ -38,7 +49,7 @@ export async function analyzeTrip(
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
-      system: SYSTEM_INSTRUCTION,
+      system: systemInstruction,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
